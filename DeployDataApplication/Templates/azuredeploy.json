@@ -1,0 +1,143 @@
+﻿{
+
+  "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters":
+  {
+    "administratorLogin":
+    {
+      "type": "string"
+    },
+    "administratorLoginPassword":
+    {
+      "type": "securestring"
+    },
+    "databaseName":
+    {
+      "type": "string"
+    },
+    "location":
+    {
+      "type": "string"
+    },
+    "_artifactsLocation":
+    {
+      "type": "string"
+    },
+    "_artifactsLocationSasToken":
+    {
+      "type": "securestring"
+    },
+    "projectName":
+    {
+      "type": "string"
+    },
+    "deployPackageFolder":
+    {
+      "type": "string"
+    },
+    "deployPackageFileName":
+    {
+      "type": "string"
+    }
+  },
+  "variables":
+  {
+    "collation": "SQL_Latin1_General_CP1_CI_AS",
+    "edition": "Premium",
+    "maxSizeBytes": "1073741824",
+    "requestedServiceObjectiveName": "P1",
+    "storageKeyType": "SharedAccessKey",
+    "version": "12.0",
+    "serverName": "[concat('sqldemo', uniqueString(resourceGroup().id))]"
+  },
+  "resources":
+  [
+    {
+      "name": "[variables('serverName')]",
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2014-04-01-preview",
+      "location": "[parameters('location')]",
+      "properties":
+      {
+        "administratorLogin": "[parameters('administratorLogin')]",
+        "administratorLoginPassword": "[parameters('administratorLoginPassword')]",
+        "version": "[variables('version')]"
+      },
+      "resources":
+      [
+        {
+          "name": "AllowAllWindowsAzureIps",
+          "type": "firewallrules",
+          "apiVersion": "2014-04-01-preview",
+          "location": "[parameters('location')]",
+          "dependsOn":
+          [
+            "[concat('Microsoft.Sql/servers/', variables('serverName'))]"
+          ],
+          "properties":
+          {
+            "endIpAddress": "0.0.0.0",
+            "startIpAddress": "0.0.0.0"
+          }
+        },
+        {
+          "name": "[parameters('databaseName')]",
+          "type": "databases",
+          "apiVersion": "2014-04-01-preview",
+          "location": "[parameters('location')]",
+          "dependsOn":
+          [
+            "[concat('Microsoft.Sql/servers/', variables('serverName'))]"
+          ],
+          "properties":
+          {
+            "collation": "[variables('collation')]",
+            "edition": "[variables('edition')]",
+            "maxSizeBytes": "[variables('maxSizeBytes')]",
+            "requestedServiceObjectiveName": "[variables('requestedServiceObjectiveName')]"
+          },
+          "resources":
+          [
+            {
+              "name": "Import",
+              "type": "extensions",
+              "apiVersion": "2014-04-01-preview",
+              "dependsOn":
+              [
+                "[concat('Microsoft.Sql/servers/', variables('serverName'), '/databases/', parameters('databaseName'))]"
+              ],
+              "properties":
+              {
+                "storageKeyType": "[variables('storageKeyType')]",
+                "storageKey": "[parameters('_artifactsLocationSasToken')]",
+                "storageUri": "[concat(parameters('_artifactsLocation'),'/', parameters('projectName'), '/', parameters('deployPackageFolder'),'/', parameters('deployPackageFileName'))]",
+                "administratorLogin": "[parameters('administratorLogin')]",
+                "administratorLoginPassword": "[parameters('administratorLoginPassword')]",
+                "operationMode": "Import"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "outputs":
+  {
+    "serverName":
+    {
+      "type": "object",
+      "value": "[reference(variables('serverName'))]"
+    },
+    "artifactsLocation":
+    {
+      "type": "string",
+      "value": "[parameters('_artifactsLocation')]"
+    },
+    "artifactsLocationSasToken":
+    {
+      "type": "string",
+      "value": "[parameters('_artifactsLocationSasToken').length]"
+    }
+  }
+}
